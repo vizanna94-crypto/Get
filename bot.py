@@ -45,8 +45,9 @@ logger = logging.getLogger(__name__)
 # окружения BOT_TOKEN и ADMIN_CHAT_ID на хостинге.
 # ---------------------------------------------------------------------------
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "ВСТАВЬ_СЮДА_ТОКЕН_ОТ_BOTFATHER")
-ADMIN_CHAT_ID = int(os.environ.get("ADMIN_CHAT_ID", "0"))  # твой numeric chat_id
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "ВСТАВЬ_СЮДА_ТОКЕН_ОТ_BOTFATHER").strip()
+ADMIN_CHAT_ID_RAW = os.environ.get("ADMIN_CHAT_ID", "0").strip()
+ADMIN_CHAT_ID = int(ADMIN_CHAT_ID_RAW) if ADMIN_CHAT_ID_RAW else 0
 
 # Файл с карточкой оплаты (номер телефона + имя), лежит рядом с bot.py
 PAYMENT_CARD_PATH = os.path.join(
@@ -172,6 +173,23 @@ async def question_received(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             await update.message.reply_photo(photo=f)
     else:
         logger.warning("Файл payment_card.png не найден рядом с bot.py")
+        # ВРЕМЕННАЯ ДИАГНОСТИКА: покажем админу, что видит бот на сервере
+        try:
+            here = os.path.dirname(os.path.abspath(__file__))
+            listing = os.listdir(here)
+        except Exception as e:
+            here = f"(ошибка: {e})"
+            listing = []
+        if ADMIN_CHAT_ID:
+            await context.bot.send_message(
+                chat_id=ADMIN_CHAT_ID,
+                text=(
+                    "⚠️ Диагностика: карточка оплаты не найдена.\n"
+                    f"Ищу здесь: {PAYMENT_CARD_PATH}\n"
+                    f"Папка бота: {here}\n"
+                    f"Файлы в папке: {listing}"
+                ),
+            )
 
     # 2) Админу (тебе) — пересылка всей заявки
     if ADMIN_CHAT_ID:
